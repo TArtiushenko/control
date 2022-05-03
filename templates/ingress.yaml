@@ -1,0 +1,67 @@
+{{- if .Values.ingress.enabled -}}
+{{- $fullName := include "control.fullname" . -}}
+{{- $svcPort := .Values.control.port -}}
+{{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
+  {{- if not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class") }}
+  {{- $_ := set .Values.ingress.annotations "kubernetes.io/ingress.class" .Values.ingress.className}}
+  {{- end }}
+{{- end }}
+{{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1
+{{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1beta1
+{{- else -}}
+apiVersion: extensions/v1beta1
+{{- end }}
+kind: Ingress
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "control.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if and .Values.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    - hosts:
+        - {{ .Values.control.domain }}
+      secretName: tls-control
+  {{- end }}
+  rules:
+    - host: {{ .Values.control.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: 
+                name: {{ $fullName }}-frontend
+                port:
+                  number: {{ .Values.control.frontendPort }}
+          - path: /ws
+            pathType: Exact
+            backend:
+              service:
+                name: {{ $fullName }}-realtime
+                port:
+                  number: {{ .Values.control.realtimePort }}
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: 
+                name: {{ $fullName }}
+                port:
+                  number: {{ $svcPort }}
+          - path: /papi
+            pathType: Prefix
+            backend:
+              service: 
+                name: {{ $fullName }}
+                port:
+                  number: {{ $svcPort }}
+{{- end -}}

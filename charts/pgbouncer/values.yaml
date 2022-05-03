@@ -1,0 +1,6 @@
+appName: pgbouncer
+image:
+  registry: docker-hub.middleware.biz
+  repotype: corezoid
+  repository: /pgbouncer
+  tag: 1.14.0-alpine3.15

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "control.fullname" . }}-frontend
+  labels:
+    app: {{ .Values.global.product }}
+    tier: frontend
+    chart: {{ include "control.fullname" . }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.control.frontendPort }}
+      targetPort: {{ .Values.control.frontendPort }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Values.global.product }}
+    tier: frontend
+    chart: {{ include "control.fullname" . }}

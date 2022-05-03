@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "control.fullname" . }}-cron
+  labels:
+    app: {{ .Values.global.product }}
+    tier: server
+    chart: {{ include "control.fullname" . }}
+    cron: "true"
+spec:
+  {{- if not .Values.autoscaling.cron.enabled }}
+  replicas: {{ .Values.replicaCount.cron }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Values.global.product }}
+      tier: server
+      chart: {{ include "control.fullname" . }}
+      cron: "true"
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app: {{ .Values.global.product }}
+        tier: server
+        chart: {{ include "control.fullname" . }}
+        cron: "true"
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "control.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: init-wait-main-postgresql
+          image: "{{ .Values.imageInit.repository }}:{{ .Values.imageInit.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - until nc -zvw1 {{ .Values.global.db.host }} {{ .Values.global.db.port }};
+              do echo waiting for dependencies; sleep 2; done;
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        - name: init-wait-redis
+          image: "{{ .Values.imageInit.repository }}:{{ .Values.imageInit.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - until nc -zvw1 {{ .Values.control.redis.host }} {{ .Values.control.redis.port }};
+              do echo waiting for dependencies; sleep 2; done;
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        - name: init-wait-pubsub-redis
+          image: "{{ .Values.imageInit.repository }}:{{ .Values.imageInit.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - until nc -zvw1 {{ .Values.control.redisPubSub.host }} {{ .Values.control.redisPubSub.port }};
+              do echo waiting for dependencies; sleep 2; done;
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+
+        - name: init-wait-elasticsearch
+          image: "{{ .Values.imageInit.repository }}:{{ .Values.imageInit.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - until nc -zvw1 {{ .Values.control.elasticsearch.host }} {{ .Values.control.elasticsearch.port }};
+              do echo waiting for dependencies; sleep 2; done;
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: ENABLE_CRONS
+              value: "true"
+          ports:
+            - name: http
+              containerPort: {{ .Values.control.port }}
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: http
+          #   httpGet:
+          #     path: /
+          #     port: http
+          readinessProbe:
+            tcpSocket:
+              port: http
+          #   httpGet:
+          #     path: /
+          #     port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /ebsmnt/conf/control.yml
+              subPath: control.yml
+            - name: attachments
+              mountPath: /ebsmnt/attachments
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "control.fullname" . }}
+        - name: attachments
+          persistentVolumeClaim:
+            claimName: {{ include "control.fullname" . }}-server-attachments-claim
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

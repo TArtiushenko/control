@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: {{ .Values.global.product }}
+    tier: server
+    chart: {{ include "control.fullname" . }}
+  name: {{ include "control.fullname" . }}-server-attachments-claim
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  selector:
+    matchLabels:
+      app: {{ .Values.global.product }}
+      tier: server
+      chart: {{ include "control.fullname" . }}
+  storageClassName: manual
+  volumeMode: Filesystem
+  volumeName: {{ include "control.fullname" . }}-server-attachments-pv

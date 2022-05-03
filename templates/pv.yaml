@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    app: {{ .Values.global.product }}
+    tier: server
+    chart: {{ include "control.fullname" . }}
+  name: {{ include "control.fullname" . }}-server-attachments-pv
+spec:
+  accessModes:
+    - ReadWriteMany
+  capacity:
+    storage: 1Gi
+  claimRef:
+    name: {{ include "control.fullname" . }}-server-attachments-claim
+    namespace: {{ .Release.Namespace }}
+  hostPath:
+    path: /ebsmnt/control/{{ include "control.fullname" . }}/attachments
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: manual
+  volumeMode: Filesystem
+

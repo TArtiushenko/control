@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "control.fullname" . }}-frontend
+  labels:
+    app: control
+    tier: frontend
+    chart: {{ include "control.fullname" . }}
+spec:
+  {{- if not .Values.autoscaling.frontend.enabled }}
+  replicas: {{ .Values.replicaCount.frontend }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: control
+      tier: frontend
+      chart: {{ include "control.fullname" . }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app: control
+        tier: frontend
+        chart: {{ include "control.fullname" . }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "control.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-frontend
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.imageFront.repository }}:{{ .Values.imageFront.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.imageRealtime.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.control.frontendPort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+          resources:
+            {{- toYaml .Values.resourcesFront | nindent 12 }}
+          volumeMounts:
+            - name: config-nginx
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: config-site
+              mountPath: /etc/nginx/conf.d/control_frontend.conf
+              subPath: control_frontend.conf
+            - name: config-site
+              mountPath: /usr/share/nginx/html/config.json
+              subPath: config.json
+      volumes:
+        - name: config-nginx
+          configMap:
+            name: {{ include "control.fullname" . }}-frontend-nginx
+        - name: config-site
+          configMap:
+            name: {{ include "control.fullname" . }}-frontend-site
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

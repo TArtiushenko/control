@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "control.fullname" . }}-realtime
+  labels:
+    app: {{ .Values.global.product }}
+    tier: realtime
+    chart: {{ include "control.fullname" . }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.control.realtimePort }}
+      targetPort: {{ .Values.control.realtimePort }}
+      protocol: TCP
+      name: ws
+  selector:
+    app: {{ .Values.global.product }}
+    tier: realtime
+    chart: {{ include "control.fullname" . }}

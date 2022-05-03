@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "control.fullname" . }}-realtime
+data:
+  control_realtime.yml: |
+    port: {{ .Values.control.realtimePort }}
+    redis:
+      port: {{ .Values.control.redis.port }}
+      host: {{ .Values.control.redis.host }}
+      password: {{ .Values.control.redis.password }}
+      pool:
+        max: 50
+        idle: 30000
+    redisPubSub:
+      port: {{ .Values.control.redis.port }}
+      host: {{ .Values.control.redis.host }}
+      password: {{ .Values.control.redis.password }}
+      pool:
+        max: 50
+        idle: 30000

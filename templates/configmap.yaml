@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "control.fullname" . }}
+data:
+  control.yml: |
+    enableAPI: ${ENABLE_API}
+    enableCrons: ${ENABLE_CRONS}
+    port: {{ .Values.control.port }}
+    apiVersion: "{{ .Values.control.apiVersion }}"
+    apiSecret: {{ .Values.control.apiSecret }}
+    browserExtensionsSecret: {{ .Values.control.browserExtensionsSecret }}
+    googleApiKey: {{ .Values.control.googleApiKey }}
+    superAdminApiKey: {{ .Values.control.superAdminApiKey }}
+    locales: {{- range .Values.control.locales }}
+      - {{.}}{{- end }}
+    timeZone: {{ .Values.control.timeZone }}
+    session:
+      ttl: {{ .Values.control.session.ttl }}
+    requestLimits:
+      ip: {{ .Values.control.requestLimits.ip }}
+    auth:
+      disablePublicApiCheck: {{ .Values.control.auth.disablePublicApiCheck }}
+      name: {{ .Values.control.auth.name }}
+      saSecretKey: {{ .Values.control.auth.key }}
+      url: https://{{ .Values.control.auth.domain }}
+    trackUrl: https://{{ .Values.control.domain }}
+    apiCorezoid: https://{{ .Values.control.apiCorezoidDomain }}
+    adminCorezoid: https://{{ .Values.control.adminCorezoidDomain }}
+
+    connectors:
+      apiLogin: {{ .Values.control.connectors.apiLogin }}
+      apiSecret: {{ .Values.control.connectors.apiSecret }}
+      convId: {{ .Values.control.connectors.convId }}
+      syncApiUrl: {{ .Values.control.connectors.syncApiUrl }}
+    corezoidSyncApiUrl: {{ .Values.control.corezoidSyncApiUrl }}
+
+    db:
+      mainDB:
+        name: {{ .Values.global.db.name }}
+        userName: {{ .Values.global.db.userName }}
+        password: {{ .Values.global.db.password }}
+        settings:
+          {{ if .Values.pgbouncer.enabled }}
+          host: pgbouncer-service
+          {{ else }}
+          host: {{ .Values.global.db.host }}
+          {{ end }}
+          port: {{ .Values.global.db.port }}
+          dialect: postgres
+          logging: false
+          pool:
+            max: 5000
+            min: 0
+            idle: 20000
+            acquire: 60000
+    redis:
+      port: {{ .Values.control.redis.port }}
+      host: {{ .Values.control.redis.host }}
+      password: {{ .Values.control.redis.password }}
+      pool:
+        max: 50
+        min: 2
+        idle: 30000
+    redisPubSub:
+      port: {{ .Values.control.redisPubSub.port }}
+      host: {{ .Values.control.redisPubSub.host }}
+      password: {{ .Values.control.redisPubSub.password }}
+      pool:
+        max: 50
+        min: 2
+        idle: 30000
+    elasticsearch:
+      protocol: {{ .Values.control.elasticsearch.protocol }}
+      host: {{ .Values.control.elasticsearch.host }}
+      port: {{ .Values.control.elasticsearch.port }}
+      pool:
+        max: 20
+        min: 2
+        idle: 30000
+    elasticsearchLogs:
+      host: {{ .Values.control.elasticsearchLogs.host }}
+      port: {{ .Values.control.elasticsearchLogs.port }}
+      userName: {{ .Values.control.elasticsearchLogs.userName }}
+      password: {{ .Values.control.elasticsearchLogs.password }}
+      index: {{ .Values.control.elasticsearchLogs.index }}
+      bulkSize: 10
+      level: custom
+    corezoid:
+      apiSecret: "{{ .Values.control.corezoid.apiSecret }}"
+      companyId: {{ .Values.control.corezoid.companyId }}
+      processes:
+        sendEmail:
+          directUrl: {{ .Values.control.corezoid.processes.sendEmail.directUrl }}
+          convId: {{ .Values.control.corezoid.processes.sendEmail.convId }}
+        botNotifications:
+          directUrl: {{ .Values.control.corezoid.processes.botNotifications.directUrl }}
+          convId: {{ .Values.control.corezoid.processes.botNotifications.convId }}
+        accRegistrations:
+          directUrl: {{ .Values.control.corezoid.processes.accRegistrations.directUrl }}
+          convId: {{ .Values.control.corezoid.processes.accRegistrations.convId }}
+    filesStorage:
+      eventFiles: {{ .Values.control.filesStorage.eventFiles }}
+    webConfig:
+      avatarPath: https://{{ .Values.control.auth.domain }}/avatars/52x52/{userId}.jpg
+      systemUserAvatar: https://{{ .Values.control.domain }}/static/systemUserAvatar.svg
+      adminCorezoid: https://{{ .Values.control.adminCorezoidDomain }}
+      supportEmail: {{ .Values.control.webConfig.supportEmail }}
+      realtimeApi: wss://{{ .Values.control.domain }}
+      apiDoc: https://{{ .Values.control.domain }}/api.html
+      maxFileSize: {{ .Values.control.webConfig.maxFileSize }}
+    channels:
+      gmail:
+        clientId: {{ .Values.control.channels.gmail.clientId }}
+        clientSecret: {{ .Values.control.channels.gmail.clientSecret }}
+        ignoredDomains: {{- range .Values.control.channels.gmail.ignoredDomains }}
+          - {{.}}{{- end }}

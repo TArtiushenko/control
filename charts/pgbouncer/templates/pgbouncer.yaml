@@ -1,0 +1,150 @@
+{{- if .Values.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.appName }}-service
+  labels:
+    app: {{ .Values.global.product }}
+    chart: {{ include "control.fullname" . }}
+    tier: {{ .Values.appName}}
+spec:
+  selector:
+    app: {{ .Values.global.product }}
+    chart: {{ include "control.fullname" . }}
+    tier: {{ .Values.appName}}
+  ports:
+  - name: pgbouncer
+    protocol: TCP
+    port: 5432
+    targetPort: 5432
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.appName }}-autoscale
+  labels:
+    app: {{ .Values.global.product }}
+    chart: {{ include "control.fullname" . }}
+    tier: {{ .Values.appName }}
+spec:
+  minReplicas: {{ .Values.minReplicas }}
+  maxReplicas: {{ .Values.maxReplicas }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.appName }}-deployment
+  targetCPUUtilizationPercentage: 70
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}-deployment
+  labels:
+    app: {{ .Values.global.product }}
+    chart: {{ include "control.fullname" . }}
+    tier: {{ .Values.appName}}
+spec:
+  replicas: {{ .Values.minReplicas }}
+  selector:
+    matchLabels:
+      tier: {{ .Values.appName}}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "9127"
+        prometheus.io/scrape: "true"
+      labels:
+        app: {{ .Values.global.product }}
+        chart: {{ include "control.fullname" . }}
+        tier: {{ .Values.appName}}
+    spec:
+      containers:
+        - name: {{ .Values.appName }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repotype}}{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+            - name: DB_USER
+              value: {{ .Values.global.db.userName }}
+            - name: DB_PASSWORD
+              value: {{ .Values.global.db.password }}
+            - name: STATS_USERS
+              value: {{ .Values.global.db.userName }}
+            - name: DB_HOST
+              value: {{ .Values.global.db.host }}
+            - name: DB_PORT
+              value: {{ .Values.global.db.port }}
+            - name: IGNORE_STARTUP_PARAMETERS
+              value: "extra_float_digits"
+            - name: DB_NAME
+              value: "*"
+            - name: MAX_CLIENT_CONN
+              value: {{ .Values.global.db.maxclientconn | quote }}
+            - name: DEFAULT_POOL_SIZE
+              value: {{ .Values.global.db.default_pool_size | quote }}
+            - name: RESERVE_POOL_SIZE
+              value: "400"
+            - name: POOL_MODE
+              value: {{ .Values.global.db.default_pool_mode }}
+            - name: RESERVE_POOL_TIMEOUT
+              value: "2"
+            - name: SERVER_IDLE_TIMEOUT
+              value: "15"
+            {{ $loglevel := .Values.global.log_level }}
+            {{- if eq $loglevel "debug" }}
+            - name: VERBOSE
+              value: "2"
+            {{- end }}
+          ports:
+          - containerPort: 5432
+          resources:
+            {{ .Values.resources | toYaml | indent 12 | trim }}
+          readinessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+        - name: pgbouncer-exporter
+          image: docker-hub.middleware.biz/public/prometheus-pgbouncer-exporter:2.1.1-python3.7.13-alpine3.15
+          env:
+            - name: PGBOUNCER_EXPORTER_HOST
+              value: 0.0.0.0
+            - name: PGBOUNCER_EXPORTER_PORT
+              value: "9127"
+            - name: PGBOUNCER_HOST
+              value: localhost
+            - name: PGBOUNCER_PORT
+              value: "5432"
+            - name: PGBOUNCER_USER
+              value: {{ .Values.global.db.userName }}
+            - name: PGBOUNCER_PASS
+              value: {{ .Values.global.db.password }}
+          resources:
+            limits:
+              cpu: "50m"
+              memory: "50Mi"
+            requests:
+              cpu: "50m"
+              memory: "50Mi"
+      {{- if not  (eq .Values.repotype "public") }}
+      imagePullSecrets:
+        {{ .Values.imagePullSecrets | toYaml | indent 8}}
+      {{- end }}
+{{- end }}

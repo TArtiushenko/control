@@ -1,0 +1,216 @@
+# Default values for control.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 
+  cron: 1
+  server: 1
+  frontend: 1
+  realtime: 1
+
+image:
+  repository: docker-hub.middleware.biz/ctrl/ctrl-server-dev
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "91173f15"
+
+imageRealtime:
+  repository: docker-hub.middleware.biz/ctrl/ctrl-realtime-dev
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "971c9575"
+
+imageFront:
+  repository: docker-hub.middleware.biz/ctrl/ctrl-frontend-dev
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "2eabd05d"
+
+imageInit:
+  repository: docker-hub.middleware.biz/hub.docker.com/library/alpine
+  pullPolicy: IfNotPresent
+  tag: "3.12"
+
+imagePullSecrets:
+  - name: develop-middleware-registry-secret
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: true
+  # className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/server-snippets:
+  # tls:
+  #  - secretName: control-tls
+    #  hosts:
+    #    - control.local
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 500Mi
+  requests:
+    cpu: 300m
+    memory: 300Mi
+
+resourcesFront:
+  limits:
+    cpu: 200m
+    memory: 600Mi
+  requests:
+    cpu: 50m
+    memory: 100Mi
+
+autoscaling:
+  server:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+  realtime:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+  frontend:
+    enabled: false
+  cron:
+    enabled: false
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+global:
+  product: control
+  db:
+    name:
+    userName:
+    password:
+    host:
+    port: 5432
+
+pgbouncer:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  resources: {}
+  imagePullSecrets:
+    - name: develop-middleware-registry-secret
+
+control:
+  port: 9000
+  realtimePort: 9005
+  frontendPort: 80
+  apiVersion: '1.0'
+  apiSecret:
+  browserExtensionsSecret:
+  googleApiKey:
+  superAdminApiKey:
+  locales:
+    - en
+  timeZone: 2
+  session:
+    ttl: "2592000"
+  requestLimits:
+    ip: -1
+
+  auth: #single account
+    disablePublicApiCheck: true
+    name:
+    key:
+    domain:
+
+  domain:
+  apiCorezoidDomain:
+  adminCorezoidDomain:
+
+  connectors:
+    apiLogin:
+    apiSecret:
+    convId:
+    syncApiUrl:
+  corezoidSyncApiUrl:
+
+  redis:
+    port: 6379
+    host:
+    password:
+
+  redisPubSub:
+    port: 6379
+    host:
+    password:
+
+  elasticsearch:
+    protocol: 'http'
+    host:
+    port: 9200
+  
+  elasticsearchLogs:
+    host:
+    port: 9200
+    index: control
+    userName:
+    password:
+
+  corezoid:
+    companyId:
+    apiSecret:
+    processes:
+      sendEmail:
+        directUrl:
+        convId:
+      botNotifications:
+        directUrl:
+        convId:
+      accRegistrations:
+        directUrl:
+        convId:
+
+  filesStorage:
+    eventFiles: '/ebsmnt/attachments'
+
+  webConfig:
+    supportEmail: ''
+    maxFileSize: '26214400'
+
+  channels:
+    gmail:
+      clientId:
+      clientSecret:
+      ignoredDomains: []
+

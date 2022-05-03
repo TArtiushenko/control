@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "control.fullname" . }}-realtime
+  labels:
+    app: {{ .Values.global.product }}
+    tier: realtime
+    chart: {{ include "control.fullname" . }}
+spec:
+  {{- if not .Values.autoscaling.realtime.enabled }}
+  replicas: {{ .Values.replicaCount.realtime }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Values.global.product }}
+      tier: realtime
+      chart: {{ include "control.fullname" . }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app: {{ .Values.global.product }}
+        tier: realtime
+        chart: {{ include "control.fullname" . }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "control.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: init-wait-redis
+          image: "{{ .Values.imageInit.repository }}:{{ .Values.imageInit.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: Always        
+          command:
+            - sh
+            - -c
+            - until nc -zvw1 {{ .Values.control.redis.host }} {{ .Values.control.redis.port }}; do echo waiting for dependencies;
+              sleep 2; done;
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        - name: init-wait-pubsub-redis
+          image: "{{ .Values.imageInit.repository }}:{{ .Values.imageInit.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: Always
+          command:
+            - sh
+            - -c
+            - until nc -zvw1 {{ .Values.control.redisPubSub.host }} {{ .Values.control.redisPubSub.port }}; do echo waiting for dependencies;
+              sleep 2; done;
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      containers:
+        - name: {{ .Chart.Name }}-realtime
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.imageRealtime.repository }}:{{ .Values.imageRealtime.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.imageRealtime.pullPolicy }}
+          ports:
+            - name: ws
+              containerPort: {{ .Values.control.realtimePort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: ws
+            # tcpSocket:
+            #   port: ws
+          readinessProbe:
+            # tcpSocket:
+            #   port: ws
+            httpGet:
+              path: /
+              port: ws
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config-volume-realtime
+              mountPath: /ebsmnt/conf/control_realtime.yml
+              subPath: control_realtime.yml
+      volumes:      
+        - name: config-volume-realtime
+          configMap:
+            name: {{ include "control.fullname" . }}-realtime
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
