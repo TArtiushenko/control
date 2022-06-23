@@ -111,7 +111,7 @@ spec:
               mountPath: /ebsmnt/conf/control.yml
               subPath: control.yml
             - name: attachments
-              mountPath: /ebsmnt/attachments
+              mountPath: {{ .Values.control.filesStorage.eventFiles }}
       volumes:
         - name: config-volume
           configMap:
@@ -123,10 +123,16 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
       affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: api
+                operator: In
+                values:
+                - "true"
+            topologyKey: "kubernetes.io/hostname"
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
