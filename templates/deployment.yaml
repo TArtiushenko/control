@@ -111,7 +111,7 @@ spec:
               mountPath: /ebsmnt/conf/control.yml
               subPath: control.yml
             - name: attachments
-              mountPath: /ebsmnt/attachments
+              mountPath: {{ .Values.control.filesStorage.eventFiles }}
       volumes:
         - name: config-volume
           configMap:
