@@ -78,7 +78,7 @@ spec:
             - name: DB_HOST
               value: {{ .Values.global.db.host }}
             - name: DB_PORT
-              value: {{ .Values.global.db.port }}
+              value: "{{ .Values.global.db.port }}"
             - name: IGNORE_STARTUP_PARAMETERS
               value: "extra_float_digits"
             - name: DB_NAME
@@ -101,12 +101,12 @@ spec:
               value: "2"
             {{- end }}
           ports:
-          - containerPort: 5432
+          - containerPort: {{ .Values.global.db.port }}
           resources:
             {{ .Values.resources | toYaml | indent 12 | trim }}
           readinessProbe:
             tcpSocket:
-              port: 5432
+              port: {{ .Values.global.db.port }}
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 5
@@ -131,7 +131,7 @@ spec:
             - name: PGBOUNCER_HOST
               value: localhost
             - name: PGBOUNCER_PORT
-              value: "5432"
+              value: "{{ .Values.global.db.port }}"
             - name: PGBOUNCER_USER
               value: {{ .Values.global.db.userName }}
             - name: PGBOUNCER_PASS
