@@ -64,4 +64,11 @@ spec:
                 name: {{ $fullName }}
                 port:
                   number: {{ $svcPort }}
+          - path: /api/.*/download
+            pathType: Prefix
+            backend:
+              service: 
+                name: {{ $fullName }}-frontend
+                port:
+                  number: {{ .Values.control.frontendPort }}
 {{- end -}}

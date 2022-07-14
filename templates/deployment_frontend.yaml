@@ -63,6 +63,8 @@ spec:
             - name: config-site
               mountPath: /usr/share/nginx/html/config.json
               subPath: config.json
+            - name: attachments
+              mountPath: /usr/share/nginx/html/download
       volumes:
         - name: config-nginx
           configMap:
@@ -70,14 +72,23 @@ spec:
         - name: config-site
           configMap:
             name: {{ include "control.fullname" . }}-frontend-site
+        - name: attachments
+          persistentVolumeClaim:
+            claimName: {{ include "control.fullname" . }}-server-attachments-claim
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
       affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: api
+                operator: In
+                values:
+                - "true"
+            topologyKey: "kubernetes.io/hostname"
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
